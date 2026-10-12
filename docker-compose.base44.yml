@@ -1,0 +1,50 @@
+# Base44 sandbox / development environment for Horizon Properties.
+#
+# Runs the app directly from the cloned source (bind mount + Vite dev server), so
+# edits are visible without rebuilding any image.
+#   up:  docker compose -f docker-compose.base44.yml up -d --build
+#   web entry point: http://localhost:3000  (host port 3000)
+name: horizon-properties
+
+services:
+  web:
+    image: node:22
+    working_dir: /app
+    restart: on-failure
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      # Dependencies live in a named volume so the bind mount stays clean and the
+      # install survives container restarts.
+      - node_modules:/app/node_modules
+    environment:
+      # Sandbox preview wiring, read by vite.config.js. BASE44_PREVIEW_MODE is only
+      # ever passed through from the platform — never hardcoded here.
+      - BASE44_PREVIEW_MODE
+      - BASE44_SANDBOX_HOST_DOMAIN
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+      - CHOKIDAR_USEPOLLING=true
+    command:
+      - sh
+      - -ec
+      - |
+        if [ ! -f node_modules/.package-lock.json ] || [ package.json -nt node_modules/.package-lock.json ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then
+          echo "[base44] installing dependencies from lockfile"
+          npm ci --no-audit --no-fund
+        fi
+        exec npm run dev -- --host 0.0.0.0 --port 3000
+    healthcheck:
+      # Probes the dev server for real (HTTP 200 on the app entry point).
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+
+volumes:
+  node_modules:
