@@ -5,13 +5,52 @@
 /* --- Hero ---------------------------------------------------------------- */
 
 .hero {
+  /* Scroll runway for the walkthrough. The pinned viewport below is 100vh, so
+     the remaining 200vh is the distance the user travels to see the whole film
+     — long enough to feel cinematic with a ~5s clip, short enough to stay
+     comfortable. */
+  --hero-length: 300vh;
   position: relative;
+  height: var(--hero-length);
+  background: var(--navy-950);
+}
+
+/* The scroll-driven viewport: pinned for the length of the runway. Nothing
+   between the section and this element may clip, or sticky stops working. */
+.hero__stage {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  height: 100vh;
+  padding-top: var(--header-h);
+  overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  .hero__stage {
+    /* Follows the visible viewport on mobile, so no strip of background shows
+       under the film once the browser chrome collapses. */
+    height: 100dvh;
+  }
+}
+
+/* Reduced motion: the original static hero — still frame, no runway. */
+.hero--static {
+  height: auto;
   display: flex;
   align-items: center;
   min-height: min(94vh, 900px);
   padding-top: var(--header-h);
-  background: var(--navy-950);
   overflow: hidden;
+}
+
+/* In static mode the section itself is the frame the media fills. */
+.hero__stage--static {
+  position: static;
+  height: auto;
+  padding-top: 0;
+  overflow: visible;
 }
 
 .hero__media {
@@ -19,11 +58,46 @@
   inset: 0;
 }
 
-.hero__media img {
+.hero__media img,
+.hero__media video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.hero__media img {
   animation: hero-zoom 1.8s var(--ease-out) both;
+}
+
+/* Revealed once the film can actually be scrubbed — until then the poster frame
+   underneath is what the user sees, so there is never a black rectangle. */
+.hero__video {
+  opacity: 0;
+  transition: opacity 0.7s var(--ease);
+}
+
+.hero__video.is-ready {
+  opacity: 1;
+}
+
+/* Hairline load progress at the top edge while the film buffers. */
+.hero__loader {
+  position: absolute;
+  z-index: 3;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.hero__loader-fill {
+  display: block;
+  height: 100%;
+  background: var(--gold-500);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.3s linear;
 }
 
 @keyframes hero-zoom {
@@ -38,8 +112,18 @@
 .hero__overlay {
   position: absolute;
   inset: 0;
+  /* Deliberately light so the footage stays dominant: just enough shade for the
+     transparent header on top and a soft settle into the next section below. */
   background:
-    linear-gradient(180deg, rgba(6, 11, 21, 0.86) 0%, rgba(6, 11, 21, 0.5) 34%, rgba(6, 11, 21, 0.55) 68%, rgba(6, 11, 21, 0.72) 100%);
+    linear-gradient(180deg, rgba(6, 11, 21, 0.62) 0%, rgba(6, 11, 21, 0.22) 28%, rgba(6, 11, 21, 0.16) 62%, rgba(6, 11, 21, 0.44) 100%);
+}
+
+/* A soft pool of shade behind the headline, so white copy stays readable over
+   any frame of the film without dimming the whole picture. */
+.hero__scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(62% 54% at 50% 46%, rgba(6, 11, 21, 0.44) 0%, rgba(6, 11, 21, 0) 72%);
 }
 
 .hero__fade {
@@ -996,7 +1080,9 @@
 }
 
 @media (max-width: 767px) {
-  .hero {
+  /* Only the static (reduced motion) hero has a fixed minimum height; the
+     scroll-driven viewport stays pinned to the real viewport height. */
+  .hero--static {
     min-height: clamp(560px, 88vh, 780px);
   }
 

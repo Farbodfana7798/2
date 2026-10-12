@@ -37,6 +37,22 @@ Findings that are not obvious from the manifests. Keep this file short.
   be transparent at the top of the page. A new page without one needs its own
   top padding.
 
+## Hero film (home page only)
+
+- `src/sections/Hero.jsx` pins a 100vh viewport inside a 300vh runway and
+  **scrubs** the walkthrough film — it is never played, only seeked. The
+  mechanics (rAF loop, interpolation, seek threshold) live in
+  `src/lib/scrollScrub.js`; read its header before touching tuning constants.
+- Assets are same-origin static files: `public/videos/hero-{desktop,mobile}.{mp4,webm}`
+  and `public/images/hero-poster-{desktop,mobile}.jpg` (the poster is the film's
+  first frame). MP4 is listed before WebM, so browsers with H.264 use it.
+- Scrubbing is only smooth because the encodes seek cheaply: keyframe every 10
+  frames, no B-frames, no audio, moov first. The exact ffmpeg command is in the
+  `scrollScrub.js` header — re-encode with the same flags.
+- The film is chosen at mount by `(max-width: 767px)`, reduced motion renders a
+  still poster and never downloads the film, and a failed load falls back to the
+  photograph. Every other route still uses `.page-hero`.
+
 ## Verifying a change
 
 - Routes: `/`, `/properties`, `/properties/:slug`, `/about`, `/services`,
@@ -44,3 +60,8 @@ Findings that are not obvious from the manifests. Keep this file short.
 - Property detail slug example: `/properties/lakeside-modern-villa`.
 - Check for console errors, no horizontal overflow at 320/768/1024/1440, and that
   the fixed mobile CTA bar on a property page does not cover the footer.
+- Hero film: at the page top `video.currentTime` must stay `0` and `video.paused`
+  must stay `true`, with no `autoplay`/`loop`. Scroll to
+  `(heroHeight - viewportHeight) * 0.5` and the time must settle at half of
+  `video.duration`; scroll back and it must follow in reverse; hold still and it
+  must not drift. The runway is 3 × viewport height.
